@@ -1,0 +1,211 @@
+import { Button, VerticalBox, HorizontalBox, TextEdit } from "std-widgets.slint";
+import { GameSave } from "GameSaveComponent.slint";
+
+export component AppWindow inherits Window {
+    title: "Rusty Hex Coincidence Finder";
+    min-height: 280pt;
+    min-width: 240pt;
+
+    max-height: 480pt;
+    max-width: 480pt;
+
+    in-out property <[string]> gamesaves;
+    in-out property <[string]> gamesaves_paths;
+    in-out property <[int]> values;
+    property <int> index: 0;
+
+    in-out property <int> found-coincidences: -1;
+    in-out property <int> unique-coincidence-index: -1;
+    in-out property <string> gamesave-to-clone-filepath: "";
+
+    out property <string> selected-modify-value <=> modify-value.text;
+
+    callback request-add-savegame();
+    callback request-remove-savegame(name: string);
+    callback update-savegame-value(name: string, value: string);
+    callback request-refresh();
+    callback request-modify-n-save();
+
+    VerticalBox {
+        padding: 8pt;
+
+        VerticalLayout {
+            padding: 4pt;
+            spacing: 4pt;
+            alignment: start;
+
+            max-height: 780pt;
+            max-width: 960pt;
+
+            Text {
+                text: "Savegame files";
+                font-size: 18pt;
+                horizontal-alignment: center;
+                vertical-alignment: top;
+            }
+
+            // table descriptions
+            if gamesaves.length > 0: HorizontalLayout {
+                padding-top: 10pt;
+                padding-left: 3pt;
+                padding-right: 3pt;
+                Text {
+                    horizontal-alignment: left;
+                    vertical-alignment: bottom;
+
+                    text: "value";
+                    color: darkgrey;
+                    font-italic: true;
+                }
+
+                Text {
+                    horizontal-alignment: center;
+                    vertical-alignment: bottom;
+
+                    text: "file name";
+                    color: darkgrey;
+                    font-italic: true;
+                }
+
+                Text {
+                    horizontal-alignment: right;
+                    vertical-alignment: bottom;
+
+                    text: "delete";
+                    color: darkgrey;
+                    font-italic: true;
+                }
+            }
+
+            if gamesaves.length == 0: HorizontalLayout {
+                padding: 4pt;
+                height: 48px;
+
+                Rectangle {
+                    background: #222222;
+                    border-radius: 4pt;
+
+                    Text {
+                        text: "No savegame added yet...";
+                        color: darkslategray;
+                        font-italic: true;
+                        font-size: 10pt;
+                    }
+                }
+            }
+
+            for gs in gamesaves: GameSave {
+                name: gs;
+                remove-click => {
+                    root.request-remove-savegame(gs);
+                }
+                update-value => {
+                    root.update-savegame-value(self.name, self.value);
+                }
+            }
+
+            HorizontalLayout {
+                spacing: 4pt;
+
+                Button {
+                    min-height: 24pt;
+                    max-width: 32pt;
+
+                    text: "Check";
+                    primary: false;
+                    enabled: gamesaves.length > 0 ? true
+                                                  : false;
+
+                    clicked => {
+                        root.request-refresh();
+                    }
+                }
+
+                Button {
+                    max-height: 24pt;
+
+                    text: "Add savegame";
+                    primary: false;
+
+                    clicked => {
+                        root.request-add-savegame();
+                    }
+                }
+            }
+
+
+        }
+
+        Rectangle {
+            min-height: 18pt;
+
+            background: #212424;
+            border-radius: 4pt;
+            vertical-stretch: 1;
+
+            VerticalLayout {
+                padding: 4pt;
+                alignment: center;
+
+                Text {
+                    vertical-alignment: center;
+                    horizontal-alignment: center;
+                    font-size: 20phx;
+
+                    text: found-coincidences > 1 ? "Found coincidences: \{root.found-coincidences}\nThere must be only 1"
+                        : found-coincidences > 0 ? "Found coincidences: \{root.found-coincidences}"
+                        : found-coincidences == 0 ? "No coincidences found"
+                        : "Refresh to search\nfor coincidences";
+                    color: found-coincidences > 1 ? indianred
+                        : found-coincidences == 1 ? lightgreen
+                        : found-coincidences == 0 ? indianred
+                        : lightblue;
+                }
+
+            }
+        }
+
+        HorizontalLayout {
+            spacing: 4pt;
+
+            Rectangle {
+                background: #292929;
+                border-radius: 6px;
+
+                modify-value:= TextInput {
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+
+                    selection-background-color: #99bbaa;
+                    selection-foreground-color: #000000;
+
+                    font-size: 12pt;
+                    color: lightseagreen;
+                    input-type: number;
+                    single-line: true;
+
+                    max-width: 64pt;
+
+                    text: "255";
+
+                    accessible-placeholder-text: "new value";
+
+                    visible: true;
+                }
+            }
+
+            Button {
+                min-height: 24pt;
+
+                text: "Modify & save";
+                enabled: found-coincidences == 1;
+                primary: true;
+
+                clicked => {
+                    root.request-modify-n-save();
+                }
+            }
+
+        }
+    }
+}

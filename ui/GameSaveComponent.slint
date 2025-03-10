@@ -1,0 +1,57 @@
+import { Button } from "std-widgets.slint";
+
+export component GameSave {
+    in property <string> name;
+    out property <string> value <=> update-savegame-value.text;
+
+    callback remove-click <=> remove-savegame-button.clicked;
+    callback update-value <=> update-savegame-value.edited;
+
+    HorizontalLayout {
+        alignment: stretch;
+        padding: 2pt;
+
+        Rectangle {
+            background: #292929;
+            border-radius: 6px;
+            border-width: 4pt;
+
+            update-savegame-value:= TextInput {
+                horizontal-alignment: center;
+                vertical-alignment: center;
+
+                selection-background-color: #99bbaa;
+                selection-foreground-color: #000000;
+
+                font-size: 12pt;
+                input-type: number;
+                single-line: true;
+
+                max-width: 24pt;
+
+                enabled: true;
+                visible: true;
+            }
+        }
+
+        Text {
+            horizontal-alignment: center;
+            vertical-alignment: center;
+            letter-spacing: 0.2pt;
+
+            text: name;
+            font-weight: 600;
+            font-size: 13pt;
+        }
+
+        remove-savegame-button:= Button {
+            width: 24pt;
+            height: 24pt;
+
+            text: "X";
+            primary: false;
+        }
+
+
+    }
+}

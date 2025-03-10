@@ -1,0 +1,13 @@
+[package]
+name = "rusty-hex-coincidence-finder"
+version = "0.1.0"
+edition = "2024"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+slint = "1.10.0"
+rfd = "0.15.2"
+
+[build-dependencies]
+slint-build = "1.10.0"
