@@ -145,6 +145,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         let task = FileDialog::new().add_filter("original format", file_ext)
             .set_directory(file_to_clone_folderpath)
             .set_title("Save modified savegame")
+            .set_file_name(filename)
             .save_file();
 
         match task {
