@@ -1,30 +1,34 @@
-import { Button, VerticalBox, HorizontalBox, TextEdit } from "std-widgets.slint";
+import { Button, VerticalBox, HorizontalBox, TextEdit, ListView } from "std-widgets.slint";
 import { GameSave } from "GameSaveComponent.slint";
 
 export component AppWindow inherits Window {
     title: "Rusty Hex Coincidence Finder";
-    min-height: 280pt;
-    min-width: 240pt;
+    min-height: 390pt;
+    min-width: 280pt;
 
-    max-height: 480pt;
-    max-width: 480pt;
+    max-height: 540pt;
+    max-width: 420pt;
 
-    in-out property <[string]> gamesaves;
-    in-out property <[string]> gamesaves_paths;
-    in-out property <[int]> values;
+    in-out property <[{gamesave_name: string, gamesave_path: string}]> gamesave_list;
+    in-out property <[int]> gamesave_values;
     property <int> index: 0;
 
-    in-out property <int> found-coincidences: -1;
-    in-out property <int> unique-coincidence-index: -1;
-    in-out property <string> gamesave-to-clone-filepath: "";
-
     out property <string> selected-modify-value <=> modify-value.text;
+
+    in-out property <bool> checked-for-coincidences: true;
+    in-out property <[{coincidence_line: int, coincidence_index: int}]> found-coincidences-list: [
+        {
+            coincidence-line: 0,
+            coincidence-index: 0
+        }
+    ];
 
     callback request-add-savegame();
     callback request-remove-savegame(name: string);
     callback update-savegame-value(name: string, value: string);
     callback request-refresh();
-    callback request-modify-n-save();
+
+    callback request-modify-coincidence(index: int);
 
     VerticalBox {
         padding: 8pt;
@@ -44,11 +48,14 @@ export component AppWindow inherits Window {
                 vertical-alignment: top;
             }
 
-            // table descriptions
-            if gamesaves.length > 0: HorizontalLayout {
+            /////////////////////////////////
+            // Savegame table descriptions //
+            /////////////////////////////////
+            if gamesave_list.length > 0: HorizontalLayout {
                 padding-top: 10pt;
                 padding-left: 3pt;
                 padding-right: 3pt;
+
                 Text {
                     horizontal-alignment: left;
                     vertical-alignment: bottom;
@@ -77,7 +84,10 @@ export component AppWindow inherits Window {
                 }
             }
 
-            if gamesaves.length == 0: HorizontalLayout {
+            ///////////////
+            // Savegames //
+            ///////////////
+            if gamesave_list.length == 0: HorizontalLayout {
                 padding: 4pt;
                 height: 48px;
 
@@ -94,15 +104,21 @@ export component AppWindow inherits Window {
                 }
             }
 
-            for gs in gamesaves: GameSave {
-                name: gs;
+            for gs in gamesave_list: GameSave {
+                name: gs.gamesave_name;
                 remove-click => {
-                    root.request-remove-savegame(gs);
+                    checked-for-coincidences = false;
+                    root.request-remove-savegame(gs.gamesave_name);
                 }
                 update-value => {
+                    checked-for-coincidences = false;
                     root.update-savegame-value(self.name, self.value);
                 }
             }
+
+            ///////////////////////
+            // Check/Add buttons //
+            ///////////////////////
 
             HorizontalLayout {
                 spacing: 4pt;
@@ -113,7 +129,7 @@ export component AppWindow inherits Window {
 
                     text: "Check";
                     primary: false;
-                    enabled: gamesaves.length > 0 ? true
+                    enabled: gamesave_list.length > 0 ? true
                                                   : false;
 
                     clicked => {
@@ -133,44 +149,28 @@ export component AppWindow inherits Window {
                 }
             }
 
-
         }
 
-        Rectangle {
-            min-height: 18pt;
-
-            background: #212424;
-            border-radius: 4pt;
-            vertical-stretch: 1;
-
-            VerticalLayout {
-                padding: 4pt;
-                alignment: center;
-
-                Text {
-                    vertical-alignment: center;
-                    horizontal-alignment: center;
-                    font-size: 20phx;
-
-                    text: found-coincidences > 1 ? "Found coincidences: \{root.found-coincidences}\nThere must be only 1"
-                        : found-coincidences > 0 ? "Found coincidences: \{root.found-coincidences}"
-                        : found-coincidences == 0 ? "No coincidences found"
-                        : "Refresh to search\nfor coincidences";
-                    color: found-coincidences > 1 ? indianred
-                        : found-coincidences == 1 ? lightgreen
-                        : found-coincidences == 0 ? indianred
-                        : lightblue;
-                }
-
-            }
-        }
+        /////////////////////
+        // Value selection //
+        /////////////////////
 
         HorizontalLayout {
-            spacing: 4pt;
+            spacing: 16pt;
+            alignment: center;
+
+            Text {
+                vertical-alignment: center;
+                font-size: 12pt;
+                color: #eeeeee;
+                text: "New value:";
+            }
 
             Rectangle {
                 background: #292929;
                 border-radius: 6px;
+                min-width: 64pt;
+                min-height: 24pt;
 
                 modify-value:= TextInput {
                     horizontal-alignment: center;
@@ -184,7 +184,7 @@ export component AppWindow inherits Window {
                     input-type: number;
                     single-line: true;
 
-                    max-width: 64pt;
+                    max-width: 128pt;
 
                     text: "255";
 
@@ -193,19 +193,95 @@ export component AppWindow inherits Window {
                     visible: true;
                 }
             }
+        }
 
-            Button {
-                min-height: 24pt;
+        //////////////////
+        // Mid "screen" //
+        //////////////////
 
-                text: "Modify & save";
-                enabled: found-coincidences == 1;
-                primary: true;
+        Rectangle {
+            min-height: 60pt;
 
-                clicked => {
-                    root.request-modify-n-save();
+            background: #212424;
+            border-radius: 4pt;
+            vertical-stretch: 1.0;
+
+            //////////////////////
+            // Coincidence list //
+            //////////////////////
+
+            VerticalLayout {
+                min-height: 60pt;
+                alignment: center;
+                vertical-stretch: 1.0;
+
+                Rectangle {
+                    vertical-stretch: 1.0;
+                    height: !checked-for-coincidences ? 24pt : 0pt;
+                    visible: !checked-for-coincidences;
+
+                    Text {
+                        vertical-alignment: center;
+                        horizontal-alignment: center;
+                        font-size: 20px;
+
+                        text: !checked-for-coincidences ? "Refresh to search\nfor coincidences"
+                                                       : "No coincidences found...";
+                        color: !checked-for-coincidences ? lightblue
+                                                        : #ff6666;
+                    }
+                }
+
+                Rectangle {
+                    visible: checked-for-coincidences;
+
+                    VerticalLayout {
+                        alignment: start;
+
+                        Text {
+                            height: 24pt;
+                            horizontal-alignment: center;
+                            font-size: 20phx;
+
+                            text: found-coincidences-list.length == 1 ? "Found 1 coincidence"
+                                                           : "Found \{root.found-coincidences-list.length} coincidences";
+                            color: found-coincidences-list.length == 1 ? palegreen
+                                                            : lightgoldenrodyellow;
+                        }
+
+                        Text {
+                            height: 14pt;
+                            horizontal-alignment: center;
+                            font-size: 12phx;
+
+                            text: "Select a coincidence to modify";
+                            color: #aaaaaa;
+                            font-italic: true;
+                        }
+
+                        ListView {
+                            height: checked-for-coincidences ? 142pt : 0pt;
+                            visible: checked-for-coincidences;
+
+                            for item in found-coincidences-list: Rectangle {
+                                height: 30pt;
+
+                                Button {
+                                    height: 24pt;
+                                    width: 120px;
+                                    text: "line " + item.coincidence-line;
+                                    primary: true;
+
+                                    clicked => {
+                                        request-modify-coincidence(item.coincidence-index);
+                                    }
+                                }
+                            }
+                        }
+
+                    }
                 }
             }
-
         }
     }
 }
