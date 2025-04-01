@@ -16,12 +16,7 @@ export component AppWindow inherits Window {
     out property <string> selected-modify-value <=> modify-value.text;
 
     in-out property <bool> checked-for-coincidences: true;
-    in-out property <[{coincidence_line: int, coincidence_index: int}]> found-coincidences-list: [
-        {
-            coincidence-line: 0,
-            coincidence-index: 0
-        }
-    ];
+    in-out property <[{coincidence_line: int, coincidence_index: int}]> found-coincidences-list: [];
 
     callback request-add-savegame();
     callback request-remove-savegame(name: string);
